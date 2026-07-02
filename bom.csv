@@ -1,0 +1,7 @@
+Item,Quantity,Unit Price (USD),Total Price (USD),Source,Notes
+Arduino Uno R3,1,15.73,15.73,Ferretronica,Main microcontroller
+Push Button,3,0.05,0.15,Ferretronica,User input
+Resistor 1kΩ,3,0.03,0.09,Ferretronica,Current limiting
+LCD 16x2 Display,1,4.53,4.53,Ferretronica,Character display
+I2C Module PCF8574,1,2.08,2.08,Ferretronica,I2C adapter for LCD
+Passive Buzzer,1,0.40,0.40,Ferretronica,Sound feedback

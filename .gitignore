@@ -1,0 +1,9 @@
+.pio
+.vscode
+build
+test.cpp
+test.exe
+*.elf
+*.hex
+*.eep
+*.map
