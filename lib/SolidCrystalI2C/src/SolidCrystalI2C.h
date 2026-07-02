@@ -6,8 +6,7 @@
 	allowing user to keep track of the written text, write position,
 	defined custom characters, etc.
 
-    Copyright (C) 2025-2026 Marcos Rubiano
-	email:	markusianito@proton.me
+    Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
 	This program is licensed under MIT license. See LICENSE file.
 

@@ -4,8 +4,7 @@
     Implements Button Events for AVR Easily.
 
 
-    Copyright (C) 2025-2026 Marcos Rubiano
-	email:	markusianito@proton.me
+    Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
     SPDX-License-Identifier: MIT
 */
@@ -97,7 +96,7 @@ BAction Button::watch()
     }
 
     // LONG PRESS
-    if (info.LastStable)
+    if (pullState ? !info.LastStable : info.LastStable) // if pullup, invert stable state.
     {
         if (uint16_t(now - pressTime) >= LONGPRESS_MS)
         {

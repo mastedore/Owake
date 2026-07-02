@@ -4,8 +4,7 @@
 	Implements custom time operations for the Owake project.
 
 
-	Copyright (C) 2025-2026 Marcos Rubiano
-	email:	markusianito@proton.me
+	Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -48,15 +47,13 @@ uint32_t operateTime_24hrs(uint32_t t, bool forward, TimeUnit _unit)
 
 	if (forward)
 	{
-		if ((t+=unit) > MAX_HOURS)
-			t = 0;
+		t = (t + unit) % DAYS;
 	}
 	else
 	{
-		if ((t-=unit) > MAX_HOURS)
-			t = 0;
+		t = (t + DAYS - unit) % DAYS;
 	}
-	
+
 	return t;
 }
 void operateDate(PackedDate &date, bool forward, TimeUnit unit)
@@ -68,7 +65,7 @@ void operateDate(PackedDate &date, bool forward, TimeUnit unit)
 
     uint8_t max =
         (date.month == 2 && isleep) ?
-        29 : maxMonthDay[date.month - 1];
+        29 : pgm_read_byte(&maxMonthDay[date.month - 1]);
 
     switch (unit)
     {

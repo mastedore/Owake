@@ -3,8 +3,7 @@
 
 	A simple lightweight driver library for the DS3231 RTC 
 
-	Copyright (C) 2026 Marcos Rubiano
-	email:	markusianito@proton.me
+	Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
 	This program is licensed under MIT license. See LICENSE file.
 	
@@ -69,7 +68,7 @@ void TimestampDS3231::setDay(uint8_t x)
 	}
 	else
 	{
-		day = constrain(x, 1, maxMonthDay[month-1]);
+		day = constrain(x, 1, pgm_read_byte(&maxMonthDay[month-1]));
 	}
 }
 void TimestampDS3231::setMonth(uint8_t x){		month = constrain(x, 1, 12);	}
@@ -209,7 +208,7 @@ uint8_t DS3231::temperatureMantis()
 	ask(RTC_REGISTER_TEMP+1);
 	Wire.requestFrom(RTC_I2C_ADDRESS, uint8_t(1));
 
-	return mantisEq[(Wire.read() & REG12_MSBTEMP_MASK)];
+	return pgm_read_byte(&mantisEq[(Wire.read() & REG12_MSBTEMP_MASK) >> 6]);
 }
 int8_t DS3231::itemperature()
 {

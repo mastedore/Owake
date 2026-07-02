@@ -4,8 +4,7 @@
     Implements Owake alarm subsystem states, such as Set, Running & Ringing.
 
 
-    Copyright (C) 2025-2026 Marcos Rubiano
-	email:	markusianito@proton.me
+    Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -103,7 +102,7 @@ void Alarm::Running::loop(StateCtx *ctx)
     if ((now - sys->fsm->timestamp) >= 1000)
     {
         uint32_t elapsed = (now - sys->fsm->timestamp) / 1000;
-        time -= elapsed;
+        time = (elapsed >= time) ? 0U : (time - elapsed);
         sys->fsm->timestamp += elapsed * 1000;
         lcd.seti(static_cast<uint8_t>(4 + COLS));
         insertTime(time, true, false, 0);

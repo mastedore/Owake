@@ -4,8 +4,7 @@
 	Implements the 'About' subsystem in Owake.
 
 
-	Copyright (C) 2025-2026 Marcos Rubiano
-	email:	markusianito@proton.me
+	Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -22,6 +21,8 @@
 */
 
 
+#include <avr/wdt.h>
+
 #include "state.hpp"
 #include <avr/pgmspace.h>
 
@@ -37,6 +38,7 @@ static void typeEffect(const char *text)
 	// Type out the text
 	while (text[textIndex] != stop)
 	{
+		wdt_reset();
 		char c = text[textIndex++];
 
 		if (c == endline)
@@ -51,6 +53,7 @@ static void typeEffect(const char *text)
 			// Delete the text
 			while (col > 0 || row > 0)
 			{
+				wdt_reset();
 				if (col > 0)
 				{
 					col--;

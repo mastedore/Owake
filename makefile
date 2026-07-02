@@ -1,7 +1,6 @@
 #	Universal Tiny Project Makefile - avr
 #	
-#	Copyright (C) 2026 Marcos Rubiano
-#		email: markusianito@proton.me
+#	Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 #
 #	This file is licensed under
 #	BSD-2-clause
@@ -69,7 +68,7 @@ SOURCE_DIR = src
 BUILD_DIR = build
 TARGET_DIR = $(BUILD_DIR)/binaries
 CORE_BUILD_DIR = $(BUILD_DIR)/core
-CORE_DIR = core/cores/arduino
+CORE_DIR = core/arduino
 CORE_LIBRARIES_DIR = core/libraries
 VARIANT_DIR = core/variants/$(VARIANT)
 TOOLS_DIR = tools
@@ -208,11 +207,11 @@ all: intro prospect $(BUILD_DIR) $(CORE_LIB) libs $(TARGET_DIR)/$(TARGET).hex $(
 
 intro:
 	@printf "\n\n> Universal Tiny Project Makefile - AVR Edition\n"
-	@printf "> Written by Marcos R. See /NOTICE\n\n"
+	@printf "> Written by Mastedore. See /NOTICE\n\n"
 
 prospect:
 	@printf "$(CYAN)Building Owake*\n"
-	@printf "Copyright (C) 2026 Marcos Rubiano\n"
+	@printf "Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>\n"
 	@printf "$(RED)The Owake project is licensed under GPLv3.0, see /LICENSE $(RESET)\n\n\n"
 
 # standalone:

@@ -4,8 +4,7 @@
 	Implements chronometer subsystem states for Owake.
 
 
-	Copyright (C) 2025-2026 Marcos Rubiano
-	email:	markusianito@proton.me
+	Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -67,6 +66,7 @@ static void displayMillis()
 
 void Routines::Chronometer::begin(Subsystem*)
 {
+	ticks = 0;
 	lcd.cursor(false);
     defineFont(1);
 	lcd.home(1);

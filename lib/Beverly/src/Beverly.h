@@ -5,8 +5,7 @@
 	Lightweight, efficient push button event handling for AVR microcontrollers
 
 
-    Copyright (C) 2025-2026 Marcos Rubiano
-	email:	markusianito@proton.me
+    Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
     Licensed under BSD-2-clause. See LICENSE file.
 

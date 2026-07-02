@@ -5,8 +5,7 @@
     Better use with SolidCrystalI2C
 
 
-    Copyright (C) 2026 Marcos Rubiano
-	email:	markusianito@proton.me
+    Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
 	This program is licensed under MIT license. See LICENSE file.
 */

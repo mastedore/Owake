@@ -13,8 +13,7 @@
 
 
 
-	Copyright (C) 2025-2026 Marcos Rubiano
-	email:	markusianito@proton.me
+	Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -188,6 +187,11 @@ void setup()
 	lcd << "Normally ~218ms";
 	lcd.flush();
 	delay(1000);
+
+	// Recover from hangs (e.g. a wedged I2C bus) instead of freezing forever.
+	// Fed from OwakeFSM::go() and from every loop that can legitimately block
+	// longer than a single fsm.go() call (menu idle, time/date editors, credits).
+	wdt_enable(WDTO_4S);
 }
 
 void loop()

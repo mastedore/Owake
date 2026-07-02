@@ -4,8 +4,7 @@
     Implements Owake menu subsystem state.
 
 
-    Copyright (C) 2025-2026 Marcos Rubiano
-	email:	markusianito@proton.me
+    Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,6 +19,8 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
+#include <avr/wdt.h>
 
 #include "state.hpp"
 #include "subsystem.hpp"
@@ -53,6 +54,7 @@ void Menu::Main::loop(StateCtx* ctx)
 	Subsystem*& sys = ctx->self->sys;
 	while (true)
 	{
+        wdt_reset();
         BAction act_ok = buttonOk.watch();
         BAction act_down = buttonDown.watch();
         BAction act_up = buttonUp.watch();

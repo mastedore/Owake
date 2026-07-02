@@ -9,8 +9,7 @@
 	State class has a pointer to a Subsystem object, corresponding to the subsystem where
 	the State is located.
 
-    Copyright (C) 2025-2026 Marcos Rubiano
-	email:	markusianito@proton.me
+    Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
