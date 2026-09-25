@@ -10,7 +10,11 @@
 
 CC = avr-gcc
 CXX = avr-g++
-AR = avr-ar
+# avr-gcc-ar instead of plain avr-ar: with -flto the objects only carry GCC
+# bytecode, and plain ar can't index their symbols unless the LTO plugin is
+# installed where binutils looks for it (MSYS2 does that, Debian/Ubuntu don't).
+# Without the index the linker finds nothing inside the .a files.
+AR = avr-gcc-ar
 OBJCOPY = avr-objcopy
 SIZE = avr-size
 AVRDUDE = avrdude
@@ -29,6 +33,9 @@ $(error "$(CC) is not installed or not @ PATH")
 endif
 ifeq (, $(shell which $(CXX)))
 $(error "$(CXX) is not installed or not @ PATH")
+endif
+ifeq (, $(shell which $(AR)))
+$(error "$(AR) is not installed or not @ PATH (it ships with avr-gcc)")
 endif
 
 
