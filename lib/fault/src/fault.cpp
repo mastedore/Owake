@@ -13,7 +13,9 @@
 #include <Arduino.h>
 #include "fault.h"
 
-#ifdef SOLIDCRYSTAL_I2C
+// Checking SOLIDCRYSTAL_I2C here would never work, because that macro comes
+// from the very header being included. Ask the compiler if the header exists.
+#if __has_include("SolidCrystalI2C.h")
     #include "SolidCrystalI2C.h"
 #endif
 
@@ -63,6 +65,8 @@
         lcd.flush();
     }
 #endif
+    // On AVR, 7 is WDTO_2S. The message stays up for about 2 s and then the
+    // watchdog resets the board. HALT() only parks the CPU until that happens.
     WATCHDOG(7);
     HALT();
 }

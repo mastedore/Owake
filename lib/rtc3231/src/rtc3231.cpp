@@ -32,9 +32,27 @@ constexpr uint8_t REG4_DAYS_MASK = 			0b00111111;
 constexpr uint8_t REG5_CENTURY_MASK = 		0b10000000;
 constexpr uint8_t REG5_MONTH_MASK = 		0b00011111;
 constexpr uint8_t REG12_MSBTEMP_MASK = 		0b11000000;
+constexpr uint8_t STATUS_OSF_MASK = 		0b10000000;
 
 const uint8_t mantisEq[4] PROGMEM = {0, 25, 50, 75};
 const uint8_t maxMonthDay[] PROGMEM = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+// Every field starts in range (01/01/00 00:00:00, 24h, weekday 1) so a
+// timestamp that only gets some of its fields set never sends garbage to the chip.
+TimestampDS3231::TimestampDS3231() :
+	second(0),
+	minute(0),
+	hour(0),
+	weekDay(1),
+	day(1),
+	month(1),
+	am_pm(AM),
+	hourMode(HMODE_24),
+	clockHalt(0),
+	year(0),
+	century2k(0)
+{
+}
 
 rtcFlags::rtcFlags() :
 	interrupt(0),
@@ -49,6 +67,7 @@ rtcFlags::rtcFlags() :
 
 void TimestampDS3231::setSecond(uint8_t x){	second = x%60;	}
 void TimestampDS3231::setMinute(uint8_t x){	minute = x%60;	}
+// Set the hour mode before the hour, since 12h and 24h clamp differently.
 void TimestampDS3231::setHour(uint8_t x)
 {
 	if (hourMode == HMODE_24)
@@ -72,6 +91,7 @@ void TimestampDS3231::setDay(uint8_t x)
 	}
 }
 void TimestampDS3231::setMonth(uint8_t x){		month = constrain(x, 1, 12);	}
+void TimestampDS3231::setWeekDay(uint8_t x){	weekDay = constrain(x, 1, 7);	}
 void TimestampDS3231::setYear(uint8_t x){		year= x%100;}
 void TimestampDS3231::setMD(bool x){			am_pm = x;	}
 void TimestampDS3231::setHourMode(bool x){	hourMode = x;	}
@@ -82,6 +102,7 @@ void TimestampDS3231::halt(bool x){			clockHalt = x;	}
 uint8_t TimestampDS3231::getSecond(){	return second;			}
 uint8_t TimestampDS3231::getMinute(){	return minute;			}
 uint8_t TimestampDS3231::getHour(){		return hour;			}
+uint8_t TimestampDS3231::getWeekDay(){	return weekDay;			}
 uint8_t TimestampDS3231::getDay(){		return day;				}
 uint8_t TimestampDS3231::getMonth(){	return month;			}
 uint8_t TimestampDS3231::getYear(){		return year;			}
@@ -89,15 +110,20 @@ bool TimestampDS3231::getMD(){			return am_pm;			}
 bool TimestampDS3231::getHourMode(){	return hourMode;		}
 bool TimestampDS3231::getCentury(){		return century2k;		}
 bool TimestampDS3231::isHalted(){		return clockHalt;		}
+// The two-digit year is enough: 2000 was a leap year, and the DS3231 itself
+// treats 2100 as one too.
 bool TimestampDS3231::isLeap(){			return (year % 4) == 0;	}
 
 
 
+// Points the chip at reg. endTransmission(false) sends a repeated start
+// instead of a stop, so the requestFrom() right after reads from reg.
 inline void DS3231::ask(uint8_t reg)
 {
 	message(reg);
 	Wire.endTransmission(false);
 }
+// Starts a write at reg. Bytes written after it land in reg, reg + 1, ...
 inline void DS3231::message(uint8_t reg)
 {
 	Wire.beginTransmission(RTC_I2C_ADDRESS);
@@ -105,6 +131,7 @@ inline void DS3231::message(uint8_t reg)
 }
 
 
+// The time and date registers are BCD, so 59 is stored as 0x59.
 uint8_t DS3231::tobcd(uint8_t x)
 {
 	return ((x / 10) << 4) | (x % 10);
@@ -161,7 +188,15 @@ uint8_t DS3231::setTime(TimestampDS3231& tsm)
 
 	Wire.write(tobcd(tsm.year));
 
-	return Wire.endTransmission();
+	code = Wire.endTransmission();
+	if (code != 0) {return code;}
+
+	// The time is trustworthy again, so drop the oscillator-stop flag. The chip
+	// never clears it by itself, not even across power cycles.
+	code = setStatus(getStatus() & ~STATUS_OSF_MASK);
+	if (code == 0) {flags.osf = false;}
+
+	return code;
 }
 
 uint8_t DS3231::updateTime()
@@ -171,28 +206,39 @@ uint8_t DS3231::updateTime()
 	
 	ask(RTC_REGISTER_TIME);
 
-	Wire.requestFrom(RTC_I2C_ADDRESS, uint8_t(7));
+	if (Wire.requestFrom(RTC_I2C_ADDRESS, uint8_t(7)) != 7) {return CODE_SHORT_READ;}
 
+	// The 1-bit fields below get "!= 0" on purpose. Assigning something like
+	// 0x80 straight into a 1-bit field keeps only bit 0, so it would always be 0.
 	uint8_t s = Wire.read();
-	timestamp.clockHalt = s & REG0_CLOCKHALT_MASK;
+	timestamp.clockHalt = (s & REG0_CLOCKHALT_MASK) != 0;
 	timestamp.second = tobin(s & REG0_SECONDS_MASK);
 	timestamp.minute = tobin(Wire.read() & REG1_MINUTES_MASK);
-	
 
+
+	// Bit 5 means AM/PM in 12h mode, but in 24h mode it is the tens digit
+	// for hours 20-23, so the mode bit has to be checked first.
 	uint8_t h = Wire.read();
-	uint8_t mm = (h & REG2_AMPM_MASK);
-	timestamp.hourMode = h & REG2_HOURMODE_MASK;
-	timestamp.am_pm = mm;
-	timestamp.hour = tobin(mm ? (h & REG2_HOUR_MASK) : (h & (REG2_HOUR_MASK | REG2_AMPM_MASK)));
+	timestamp.hourMode = (h & REG2_HOURMODE_MASK) != 0;
+	if (timestamp.hourMode == HMODE_12)
+	{
+		timestamp.am_pm = (h & REG2_AMPM_MASK) != 0;
+		timestamp.hour = tobin(h & REG2_HOUR_MASK);
+	}
+	else
+	{
+		timestamp.am_pm = AM;
+		timestamp.hour = tobin(h & REG2_HOURS_MASK);
+	}
 
 
 	timestamp.weekDay = Wire.read() & REG3_WEEKDAY_MASK;
 
 	timestamp.day = tobin(Wire.read() & REG4_DAYS_MASK);
 
-	
+
 	uint8_t M = Wire.read();
-	timestamp.century2k = M & REG5_CENTURY_MASK;
+	timestamp.century2k = (M & REG5_CENTURY_MASK) != 0;
 	timestamp.month = tobin(M & REG5_MONTH_MASK);
 
 
@@ -208,6 +254,8 @@ uint8_t DS3231::temperatureMantis()
 	ask(RTC_REGISTER_TEMP+1);
 	Wire.requestFrom(RTC_I2C_ADDRESS, uint8_t(1));
 
+	// The fraction is in the top 2 bits, in 0.25 C steps. It comes back as
+	// hundredths (0, 25, 50, 75) so it can be printed after a dot.
 	return pgm_read_byte(&mantisEq[(Wire.read() & REG12_MSBTEMP_MASK) >> 6]);
 }
 int8_t DS3231::itemperature()
@@ -219,9 +267,12 @@ int8_t DS3231::itemperature()
 
 	Wire.requestFrom(RTC_I2C_ADDRESS, uint8_t(1));
 
+	// Whole degrees, as a signed byte.
 	return Wire.read();
 }
 
+// An empty transmission: the chip ACKs its address if it's on the bus.
+// Returns the Wire code, 0 meaning it answered.
 uint8_t DS3231::isAvailable()
 {
 	Wire.beginTransmission(RTC_I2C_ADDRESS);
@@ -268,7 +319,7 @@ void DS3231::start()
 	flags.startCode = code & 0x7;
 	if (code == 0)
 	{
-		flags.osf = getStatus() & 0x80;
+		flags.osf = (getStatus() & STATUS_OSF_MASK) != 0;
 		flags.started = true;
 	}
 }

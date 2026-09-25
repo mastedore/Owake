@@ -16,7 +16,7 @@ Designed to be lightweight, fast, and easy to use on microcontrollers such as AV
 ### Arduino IDE
 - Download the library as a ZIP
 - Open Arduino IDE
-- Sketch → Include Library → Add .ZIP Library
+- Sketch -> Include Library -> Add .ZIP Library
 
 ### Arduino Library Manager
 Search for **Facebits** and install it directly.
@@ -49,4 +49,4 @@ uint8_t mode = readData(info, MODE_MASK); // 4
 ```
 
 
-#### Licensed under BSD-2-clause
+#### Licensed under MIT

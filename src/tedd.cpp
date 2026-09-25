@@ -38,10 +38,16 @@
     insertDate(date, false, 0);
 
 constexpr uint8_t SECTIONS = 5;
+constexpr uint8_t NO_SECTION = 255;
 
+// Sections are laid out as: 0 = cancel (X), 1-3 = the three fields, 4 = done.
+// This maps each section to the TimeUnit it edits (hour, minute, second), with
+// 255 for the two buttons. The date editor adds dateShift to get day, month, year.
 static uint8_t sectionUnit[SECTIONS] = {255U, 0U, 1U, 2U, 255U};
 
 static uint8_t section = 0;
+// Section the cursor was last moved to. Moving it costs an I2C write, so
+// adjustCursor() skips it unless the section actually changed.
 static uint8_t counter = 0;
 
 static inline void adjustTime(uint32_t &time, bool forward)
@@ -77,6 +83,8 @@ static inline void adjustCursor(EditorContext &ctx)
     case 1:
         pos = ctx.textPos;
         break;
+    // Each field is two digits plus a separator, so fields start 3 cells
+    // apart in both "hh:mm:ss" and "dd/mm/yyyy".
     case 2:
         pos = ctx.textPos + 3;
         break;
@@ -97,6 +105,7 @@ static inline void adjustCursor(EditorContext &ctx)
 bool runTimeEditor(TimeEditorContext &ctx)
 {
     section = 0;
+    counter = NO_SECTION;
     lcd.seti(ctx.cancelButtonPos);
     lcd << 'X';
     lcd.seti(ctx.doneButtonPos);
@@ -104,8 +113,12 @@ bool runTimeEditor(TimeEditorContext &ctx)
     lcd.cursor(true);
     lcd.blink(true);
 
+    // Work on a copy so cancelling leaves the caller's time untouched.
     uint32_t timebuf = *(ctx.time);
     writeTime();
+
+    // Controls: on X or done, up/down move between sections. On a field,
+    // up/down change the value and OK moves to the next field.
 
     bool done = false;
     while (!done)
@@ -178,6 +191,7 @@ bool runTimeEditor(TimeEditorContext &ctx)
 bool runDateEditor(DateEditorContext &ctx)
 {
     section = 0;
+    counter = NO_SECTION;
     lcd.seti(ctx.cancelButtonPos);
     lcd << 'X';
     lcd.seti(ctx.doneButtonPos);
@@ -185,6 +199,7 @@ bool runDateEditor(DateEditorContext &ctx)
     lcd.cursor(true);
     lcd.blink(true);
 
+    // Same controls as runTimeEditor().
     PackedDate date = *ctx.date;
     writeDate();
 

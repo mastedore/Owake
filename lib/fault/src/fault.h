@@ -48,8 +48,8 @@
         while (true)                    \
         {                               \
             esp_deep_sleep_start();     \
-        {                               \
-    }                                   
+        }                               \
+    }
 #else
     #warning fault.hpp works better on AVR and ESP32/8266
     #define HALT() \

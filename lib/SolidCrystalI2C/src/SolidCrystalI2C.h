@@ -39,6 +39,10 @@
 
 
 
+// 22 and 23 are ASCII control codes the HD44780 has no use for, so they work
+// as markers inside the buffers. They never reach the display. SKIP means
+// "nothing here" (for the overlay, show the user layer instead), END means
+// "blank from here to the end of the row".
 constexpr uint8_t CONTROL_CHAR_SKIP = 22;
 constexpr uint8_t CONTROL_CHAR_END = 23;
 constexpr uint8_t CONTROL_CHAR_EMPTY = 32;
@@ -46,7 +50,7 @@ constexpr uint8_t CONTROL_CHAR_EMPTY = 32;
 
 bool isThereAnyLCD();
 
-// lcd_flags lcd_bitmask_t (usually uint16_t) bitfield.
+// lcd_flags lcd_bitmask_t (uint32_t) bitfield, 32 bits used in total.
 struct lcd_flags
 {
 	lcd_bitmask_t DisplayShift : 1;
@@ -58,9 +62,12 @@ struct lcd_flags
 	lcd_bitmask_t FontSize : 1;
 	lcd_bitmask_t Ready : 1;
 
+	// Where the next buffered write goes. 2 + 6 bits cover up to 4x64,
+	// more than any HD44780 display.
 	lcd_bitmask_t WriteRow : 2;
 	lcd_bitmask_t WriteColumn : 6;
 
+	// Cell the visible cursor returns to after each flush().
 	lcd_bitmask_t ConstantCursorRow : 2;
 	lcd_bitmask_t ConstantCursorColumn : 6;
 	lcd_bitmask_t ConstantCursor : 1;
@@ -73,6 +80,7 @@ struct lcd_flags
 	lcd_flags();
 };
 
+// Scratch state for flush(), valid for one row at a time.
 struct stream_flags
 {
 	streaming_bitmask_t UseOverlay : 1;
@@ -84,6 +92,8 @@ struct stream_flags
 	stream_flags();
 };
 
+// How integers written with << are shown. raw sends the value itself as a
+// character code, which is how custom glyphs get printed.
 enum writeMode : uint8_t{
 	raw = 0,
 	text = 1,
@@ -91,6 +101,8 @@ enum writeMode : uint8_t{
 	hex = 3
 };
 
+// user is the normal text. overlay sits on top of it and is meant for
+// things like arrows or prompts that shouldn't wipe what's underneath.
 enum writeLayer : uint8_t{
 	user = 0, overlay = 1
 };
@@ -109,10 +121,10 @@ class LCD
 	const uint8_t rows;
 	stream_flags streamingData;
 	lcd_flags settings;
-	uint8_t* buffer;
-	uint8_t* overlayBuffer;
-	uint8_t* dirtyCells;
-	const uint8_t* glyphCache[HD44780_MAX_CGRAM];
+	uint8_t* buffer;         // user layer, one byte per cell
+	uint8_t* overlayBuffer;  // nullptr when the overlay is off
+	uint8_t* dirtyCells;     // one bit per cell, set by bufwrt(), cleared by flush()
+	const uint8_t* glyphCache[HD44780_MAX_CGRAM]; // bitmap loaded in each CGRAM slot
 
 	void sendi2c(uint8_t data);
 	void sendNibble(uint8_t data, bool _register);
@@ -146,7 +158,7 @@ class LCD
 	void cursor(bool state=true);
 	void blink(bool state=true);
 	void textDirection(bool dir=RIGHT);
-	void cursorPosition(uint8_t r, uint8_t c);
+	void cursorPosition(uint8_t c, uint8_t r);
 	void cursorPosition(uint8_t i);
 	void constantCursor(bool state=true);
 	void row(uint8_t r);
@@ -158,6 +170,8 @@ class LCD
 	void flush();
 
 
+	// Direct access to the display, skipping the buffers. Whatever these
+	// write gets overwritten by flush() if the same cell is dirty.
 	void writePosition(uint8_t c=0, uint8_t r=0);
 	void writeChar(uint8_t c);
 
@@ -186,8 +200,10 @@ class LCD
 
 	LCD(uint8_t _address, uint8_t _cols, uint8_t _rows, bool useOverlay=false, bool _fontSize=0);
 	~LCD();
-	LCD(const LCD&);
-	LCD& operator=(LCD _);
+
+	// An LCD owns its buffers and maps to one physical display, so copies make no sense.
+	LCD(const LCD&) = delete;
+	LCD& operator=(const LCD&) = delete;
 };
 
 

@@ -4,7 +4,7 @@ menu.cpu=Processor
 
 ##############################################################
 
-yun.name=Arduino Yún
+yun.name=Arduino Yun
 yun.upload.via_ssh=true
 
 yun.vid.0=0x2341
@@ -1137,7 +1137,7 @@ circuitplay32u4cat.upload_port.1.board=circuitplay32u4cat
 
 ##############################################################
 
-yunmini.name=Arduino Yún Mini
+yunmini.name=Arduino Yun Mini
 yunmini.upload.via_ssh=true
 
 yunmini.vid.0=0x2a03
@@ -1174,7 +1174,7 @@ yunmini.build.mcu=atmega32u4
 yunmini.build.f_cpu=16000000L
 yunmini.build.vid=0x2a03
 yunmini.build.pid=0x8050
-yunmini.build.usb_product="Arduino Yún Mini"
+yunmini.build.usb_product="Arduino Yun Mini"
 yunmini.build.board=AVR_YUNMINI
 yunmini.build.core=arduino
 yunmini.build.variant=yun

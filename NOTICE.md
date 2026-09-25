@@ -10,25 +10,25 @@ It includes the following third-party components:
 
 - TitaniumFSM Community (modified)
   Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
-  https://github.com/markusianito/TitaniumFSM
+  https://github.com/mastedore/TitaniumFSM
   License: GPL v3.0
 
 
 - Beverly
   Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
-  License: BSD-2-clause
+  License: MIT
 
 - Facebits
   Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
-  License: BSD-2-clause
+  License: MIT
 
-- SolidCrystalI²C
+- SolidCrystalI2C
   Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
-  License: BSD-2-clause
+  License: MIT
 
 - Universal Tiny Project Makefile AVR Edition
   Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
-  License: BSD-2-clause
+  License: MIT
   
 
 - fault

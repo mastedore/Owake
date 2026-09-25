@@ -37,6 +37,9 @@ uint8_t Alarm::section_unit[ALARM_SECTIONS] =
 
 bool Alarm::confirmCancel = false;
 
+// Seconds left before the backlight goes off during the countdown.
+// Any button press refills it.
+static uint8_t timer = LCD_BACKLIGHTOFF_S;
 
 void Alarm::Set::setup(StateCtx *ctx)
 {
@@ -55,6 +58,9 @@ void Alarm::Set::setup(StateCtx *ctx)
 void Alarm::Set::loop(StateCtx *ctx)
 {
     Subsystem *&sys = ctx->self->sys;
+    // The alarm is a countdown. What gets set here is how long until it
+    // rings, not a time of day. X goes at the start of row 1, the done
+    // button (hourglass, CGRAM slot 3) at its end.
 	TimeEditorContext tectx(sys->data, COLS, (COLS*2)-1, COLS+4, 3);
 
     bool done = runTimeEditor(tectx);
@@ -82,13 +88,14 @@ void Alarm::Running::setup(StateCtx *ctx)
     lcd << Glyph::hourglass << " Waking up in..";
     lcd.home(1);
     lcd << Glyph::bar << Glyph::right;
-    lcd.row(15);
+    lcd.column(15);
     lcd << 'X';
     lcd.cursorPosition(15, 1);
     ctx->self->sys->fsm->timestamp = millis();
-}
 
-static uint8_t timer = LCD_BACKLIGHTOFF_S;
+    confirmCancel = false;
+    timer = LCD_BACKLIGHTOFF_S;
+}
 inline void handleTimer()
 {
     if (timer == 0U) {lcd.backlight(false);}
@@ -101,6 +108,8 @@ void Alarm::Running::loop(StateCtx *ctx)
     uint32_t now = millis();
     if ((now - sys->fsm->timestamp) >= 1000)
     {
+        // Only whole seconds are taken off, and the timestamp moves by exactly
+        // that much, so the leftover milliseconds carry over instead of drifting.
         uint32_t elapsed = (now - sys->fsm->timestamp) / 1000;
         time = (elapsed >= time) ? 0U : (time - elapsed);
         sys->fsm->timestamp += elapsed * 1000;
@@ -112,6 +121,8 @@ void Alarm::Running::loop(StateCtx *ctx)
     BAction act_ok = buttonOk.watch();
     BAction act_down = buttonDown.watch();
     BAction act_up = buttonUp.watch();
+    // Cancelling takes two steps: hold OK to show "Cancel?", then press OK
+    // again. Up or down hides the prompt.
     if (act_ok == BAction::Held)
     {
         if (!confirmCancel)
@@ -147,7 +158,7 @@ void Alarm::Running::loop(StateCtx *ctx)
             lcd.row(1);
             lcd.column(static_cast<uint8_t>(lcd.getColumns() - 7));
             lcd << writeLayer::overlay;
-            for (uint8_t i = 0U; i <= 7U; i++)
+            for (uint8_t i = 0U; i < 7U; i++)
             {
                 lcd << cchar::skip;
             }
@@ -166,6 +177,7 @@ void Alarm::Running::loop(StateCtx *ctx)
 
 void Alarm::Running::exit(StateCtx *ctx)
 {
+    lcd.backlight(true);
     lcd.clear();
     lcd.constantCursor(false);
     ctx->self->sys->fsm->timestamp = 0;
@@ -180,7 +192,7 @@ void Alarm::Ringing::setup(StateCtx *ctx)
     lcd << Glyph::right << " WAKE UP! " << cchar::endl;
     lcd.home(1);
     lcd << Glyph::bar << Glyph::right;
-    lcd.row(15);
+    lcd.column(15);
     lcd << Glyph::man;
 
     digitalWrite(ALARM_SIGNAL, HIGH);
@@ -194,6 +206,8 @@ void Alarm::Ringing::loop(StateCtx *ctx)
         ctx->self->sys->requestShiftSubsystem(OwakeSubsystemID::MENU);
         return;
     }
+    // With an active buzzer beep() blocks for 500 ms, so watch() only runs
+    // about twice a second here and OK has to be held for 1-2 s to stop it.
     beep(440, 500);
     lcd.row(1);
     lcd.column(3);

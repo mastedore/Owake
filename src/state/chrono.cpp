@@ -21,6 +21,8 @@
 */
 
 
+#include <util/atomic.h>
+
 #include "state.hpp"
 #include "subsystem.hpp"
 #include "main.hpp"
@@ -42,6 +44,8 @@ uint8_t font = 1;
 
 
 
+// Status in the right corner. Top: O/X (running/stopped) and the font number.
+// Bottom: M/m (tall/small digits) and P/H (press/hold mode).
 static void displaySettings(bool visible=true)
 {
 	uint8_t position = COLS-2;
@@ -58,17 +62,28 @@ static void displaySettings(bool visible=true)
 
 static void displayMillis()
 {
+	// ticks is 4 bytes and the timer ISR can bump it in the middle of the
+	// read, which shows up as a jump on screen. Copy it with interrupts off.
+	uint32_t now = 0;
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+	{
+		now = ticks;
+	}
+
 	lcd.seti(3);
-	insertMillis(ticks, thicc, (thicc ? font : 0));
+	insertMillis(now, thicc, (thicc ? font : 0));
 }
 
 
 
 void Routines::Chronometer::begin(Subsystem*)
 {
-	ticks = 0;
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+	{
+		ticks = 0;
+	}
 	lcd.cursor(false);
-    defineFont(1);
+	defineFont(font);
 	lcd.home(1);
 	lcd << '>';
 	lcd.home();
@@ -104,6 +119,8 @@ void Chronometer::Stop::loop(StateCtx* ctx)
 	}
 
 
+	// Up and down act on release so a tap and a long press can be told apart
+	// with wasHeld(). Held itself repeats on every call while the button is down.
 	if (act_up == BAction::Released)
 	{
 		if (buttonUp.wasHeld())
@@ -121,7 +138,7 @@ void Chronometer::Stop::loop(StateCtx* ctx)
 	{
 		if (buttonDown.wasHeld())
 		{
-			buttonUp.discardHold();
+			buttonDown.discardHold();
 			sys->requestShiftSubsystem(OwakeSubsystemID::MENU);
 			return;
 		}
@@ -142,6 +159,7 @@ void Chronometer::Stop::exit(StateCtx* ctx)
 
 void Chronometer::Running::setup(StateCtx* ctx)
 {
+	// From here the Timer1 ISR in main.cpp does the counting and polls OK.
 	running = true;
 	buttonInt = true;
 	timerInt = true;

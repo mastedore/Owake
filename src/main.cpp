@@ -52,6 +52,10 @@ volatile unsigned long ticks = 0;
 volatile bool timerInt = false;
 volatile bool buttonInt = false;
 
+// Fires every 1 ms (see the Timer1 setup below). It only counts while the
+// chronometer runs. OK is polled here too, so the count stops as soon as the
+// press is confirmed and not whenever the main loop, busy redrawing over I2C,
+// gets around to checking.
 ISR(TIMER1_COMPA_vect)
 {
 	if (timerInt)
@@ -60,8 +64,10 @@ ISR(TIMER1_COMPA_vect)
 		ticks = ticks + 1;
 		if (buttonInt)
 		{
-			BAction act = buttonOk.watch();
-			if (act == BAction::Pressed || act == BAction::Released)
+			// Only a new press stops the count. The chronometer starts on a
+			// press as well, so reacting to Released would stop it as soon as
+			// the user lets go of that same press.
+			if (buttonOk.watch() == BAction::Pressed)
 			{
 				timerInt = false;
 				return;
@@ -81,6 +87,9 @@ void beep(uint16_t freq, uint16_t dura)
 #endif
 }
 
+// The order here matters. Each subsystem's State array below points into this
+// table, and a state's position inside its subsystem has to match its
+// OwakeStateID value (CLOCK_SET = 0, CLOCK_BIG_VIEW = 1, ...).
 const Program programs[] =
 	{
 		{OWK_FUNCTIONS(Menu::Main)},
@@ -144,6 +153,8 @@ void setup()
 	uint32_t ms;
 
 	{	// Hardware setup routine
+		// WDRF has to be cleared before wdt_disable(), otherwise the watchdog
+		// stays armed after a watchdog reset and bites again during setup.
 		MCUSR &= ~(1 << WDRF);
 		wdt_disable();
 		cli();
@@ -152,6 +163,7 @@ void setup()
 		TCCR1B = 0;
 		TCCR1B |= (1 << WGM12); // CTC
 
+		// 16 MHz / 64 prescaler / (249 + 1) = 1 kHz
 		OCR1A = 249;
 		TCCR1B |= (1 << CS11) | (1 << CS10);
 		TIMSK1 |= (1 << OCIE1A); // compare A
@@ -181,7 +193,7 @@ void setup()
 		buttonUp.start();
 	}
 	lcd.home();
-	ms = millis() - 1000UL;
+	ms = millis() - 1000UL; // leave out the delay(1000) above
 	lcd << "Took " << ms << "ms" << cchar::endl;
 	lcd.home(1);
 	lcd << "Normally ~218ms";

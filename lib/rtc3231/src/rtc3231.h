@@ -33,12 +33,13 @@ constexpr bool PM = true;
 constexpr bool HMODE_24 = false;
 constexpr bool HMODE_12 = true;
 
+constexpr uint8_t CODE_SHORT_READ = 4; // same value Wire uses for "other error"
 constexpr uint8_t CODE_NOT_READY = 7;
 
 extern const uint8_t mantisEq[4] PROGMEM;
 extern const uint8_t maxMonthDay[] PROGMEM;
 
-class DS3231; // forward
+struct DS3231; // forward
 
 
 // Represents a time and date, ds3231 year is valid until 2099 (99d), or 2199 century2k=1;
@@ -60,9 +61,12 @@ class TimestampDS3231
 
 	public:
 
+	TimestampDS3231();
+
 	void setSecond(uint8_t);
 	void setMinute(uint8_t);
 	void setHour(uint8_t);
+	void setWeekDay(uint8_t);
 	void setDay(uint8_t);
 	void setMonth(uint8_t);
 	void setYear(uint8_t);
@@ -75,6 +79,7 @@ class TimestampDS3231
 	uint8_t getSecond();
 	uint8_t getMinute();
 	uint8_t getHour();
+	uint8_t getWeekDay();
 	uint8_t getDay();
 	uint8_t getMonth();
 	uint8_t getYear();
@@ -84,7 +89,7 @@ class TimestampDS3231
 	bool isHalted();
 	bool isLeap();
 
-	friend class DS3231;
+	friend struct DS3231;
 };
 
 struct rtcFlags

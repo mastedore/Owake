@@ -41,6 +41,9 @@ void OwakeFSM::go()
 	{
 		FAULT(INVALID_STATE);
 	}
+	// Subsystem change: the old subsystem runs its current state's exit() and
+	// then its cleanup routine, the new one runs its begin routine and starts
+	// at state INIT (0). That state's setup() happens in dispatch() below.
 	if ((next != current) && (next != OwakeSubsystemID::NONE))
 	{
 		if ((current != OwakeSubsystemID::NONE) && (current != OwakeSubsystemID::INVALID))
@@ -70,6 +73,8 @@ void OwakeFSM::go()
 	}
 }
 
+// Subsystems get a pointer back to the FSM so their states can request a
+// subsystem change (Subsystem::requestShiftSubsystem).
 OwakeFSM::OwakeFSM(Subsystem *_syses, uint8_t total) : systems(_syses)
 {
 	for (uint8_t i = 0; i < total; i++)

@@ -7,7 +7,7 @@
 
     Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
-    Licensed under BSD-2-clause. See LICENSE file.
+    Licensed under MIT license. See LICENSE file.
 
 */
 
@@ -23,7 +23,7 @@
 enum class BAction : uint8_t {
 	Idle = 0,
 	Pressed = 1,
-	DoublePressed = 2,
+	DoublePressed = 2, // reserved, watch() doesn't report it yet
 	Held = 3,
 	Released = 4,
 	NotAvailable = 5

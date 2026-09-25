@@ -24,10 +24,14 @@
 #include "thislcd.hpp"
 #include "main.hpp"
 
+// ASCII codes of the separators. They go through printThicc() in place of a
+// digit, which prints them as-is in font 0 and as blank cells in the tall fonts.
 constexpr uint8_t dot = 46;
 constexpr uint8_t colon = 58;
 constexpr uint8_t slash = 47;
 
+// CGRAM slots for fonts 1 and 2. Both fonts load into the same slots, so one
+// table (glyphs_font_1_2) works for either. _0 is a top half, _1 a bottom half.
 #define ZERO_0 0
 #define ZERO_1 1
 #define ONE_1 2
@@ -88,7 +92,9 @@ namespace Font2
 	const uint8_t eight_1[8] PROGMEM = {0x0e, 0x0a, 0x0a, 0x0a, 0x0a, 0x0a, 0x0a, 0x0e};
 }
 
-const ThickGlyph1x2 glyphs_font_1_2[] = {
+// Digits 0-9 as two stacked cells: low byte on top, high byte below. With only
+// 8 CGRAM slots the halves are shared, e.g. 0, 2 and 3 all use ZERO_0 on top.
+const ThickGlyph1x2 glyphs_font_1_2[] PROGMEM = {
 	makeThicc(ZERO_1, ZERO_0),
 	makeThicc(ONE_1, ONE_1),
 	makeThicc(TWO_1, ZERO_0),
@@ -102,6 +108,8 @@ const ThickGlyph1x2 glyphs_font_1_2[] = {
 
 void defineHomeSymbols()
 {
+	// defineGlyph() returns 0 only when Glyph::left is already cached in slot 0.
+	// That means the home set is still loaded and the other 7 uploads can be skipped.
 	if (lcd.defineGlyph(Glyph::left, 0))
 	{
 		lcd.defineGlyph(Glyph::bar, 1);
@@ -155,6 +163,8 @@ void defineFont(uint8_t font)
 	}
 }
 
+// The arrows live on the overlay layer, so menu text written underneath
+// doesn't erase them. Writing skip gives the cell back to the user layer.
 void toggleArrows(bool on)
 {
 	lcd << writeLayer::overlay;
@@ -176,6 +186,8 @@ void toggleArrows(bool on)
 	lcd << writeLayer::user;
 }
 
+// Prints mm:ss.mmm. Minutes aren't capped, so past 99 only the last two
+// digits fit in the tall fonts.
 void insertMillis(uint32_t time, bool thicc, uint8_t font)
 {
 	uint32_t ms = time % 1000U;
@@ -293,6 +305,9 @@ void printThicc(uint8_t digit, uint8_t font)
 		}
 	}
 
+	// Top half at the current cell, bottom half right below it (the first write
+	// already moved one cell right, hence columns - 1), then continue on the
+	// top row one cell to the right. Assumes the digit starts on row 0.
 	position = static_cast<uint8_t>(lcd.geti());
 	lcd << (space ? ' ' : static_cast<char>(lowByte(dig)));
 	lcd.seti(static_cast<uint8_t>(lcd.geti() + lcd.getColumns() - 1));

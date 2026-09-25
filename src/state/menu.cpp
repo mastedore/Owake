@@ -52,6 +52,8 @@ void Menu::Main::setup(StateCtx* ctx)
 void Menu::Main::loop(StateCtx* ctx)
 {
 	Subsystem*& sys = ctx->self->sys;
+	// The menu keeps control until OK is pressed instead of going back to
+	// fsm.go() on every pass, so it has to pet the watchdog itself.
 	while (true)
 	{
         wdt_reset();
@@ -69,6 +71,7 @@ void Menu::Main::loop(StateCtx* ctx)
 		}
 		else if (act_ok == BAction::Pressed)
 		{
+			// Sections follow OwakeSubsystemID minus one: section 0 (Clock) is subsystem 1.
 			sys->fsm->shiftSubsystem(static_cast<OwakeSubsystemID>(static_cast<uint8_t>(sys->section + 1U)));
 			return;
 		}

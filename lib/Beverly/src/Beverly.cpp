@@ -45,6 +45,8 @@ uint8_t Button::getPin()
 {
     return pin;
 }
+// With INPUT_PULLUP the pin idles HIGH and reads LOW when pressed, so the
+// "last" states start HIGH to avoid a fake press on the first watch().
 void Button::start(uint8_t pull_state)
 {
     pinMode(pin, pull_state);
@@ -64,6 +66,8 @@ BAction Button::watch()
 {
     if (!info.ButtonReady) {return BAction::NotAvailable;}
     
+    // Only the low 16 bits of millis() are kept to save RAM. The uint16_t
+    // subtractions below still give the right gap as long as it's under ~65 s.
     uint16_t now = static_cast<uint16_t>(millis());
     bool raw = digitalRead(pin);
     bool pullState = info.PullState;
@@ -74,6 +78,8 @@ BAction Button::watch()
         info.LastRaw = raw;
     }
 
+    // The pin has to hold the same level for DEBOUNCE_MS before it counts
+    // as a real edge.
     if (uint16_t(now - lastDebounceTime) > DEBOUNCE_MS)
     {
 
@@ -95,7 +101,9 @@ BAction Button::watch()
         }
     }
 
-    // LONG PRESS
+    // LONG PRESS. Held comes back on every call for as long as the button stays
+    // down, not just once. Callers that want a single event can wait for
+    // Released and check wasHeld().
     if (pullState ? !info.LastStable : info.LastStable) // if pullup, invert stable state.
     {
         if (uint16_t(now - pressTime) >= LONGPRESS_MS)

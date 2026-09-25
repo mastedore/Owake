@@ -19,13 +19,13 @@ architecture that provides `digitalRead()` and `millis()`.
 
 ## Dependencies
 
-- [Facebits](https://github.com/markusianito/Facebits)
+- [Facebits](https://github.com/mastedore/Facebits)
 
 ## Installation
 ### Arduino IDE
 - Download the library as a ZIP
 - Open Arduino IDE
-- Sketch → Include Library → Add .ZIP Library
+- Sketch -> Include Library -> Add .ZIP Library
 
 ### Arduino Library Manager
 Search for **Facebits** and install it directly.

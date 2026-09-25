@@ -1,6 +1,6 @@
-# SolidCrystalI²C
+# SolidCrystalI2C
 
-SolidCrystalI²C is a **clean, minimal, powerful** library for HD44780-compatible LCDs using the PCF8574 I/O expander.
+SolidCrystalI2C is a **clean, minimal, powerful** library for HD44780-compatible LCDs using the PCF8574 I/O expander.
 
 This library was written with a strong focus on:
 - simplicity
@@ -56,7 +56,7 @@ SolidCrystalI2C takes a different approach:
 ### Arduino Library Manager
 Once available in the Library Manager:
 1. Open Arduino IDE
-2. Go to **Sketch → Include Library → Manage Libraries**
+2. Go to **Sketch -> Include Library -> Manage Libraries**
 3. Search for **SolidCrystalI2C**
 4. Install
 
@@ -132,7 +132,7 @@ It is a modern alternative designed for developers who care about:
 - Hitachi HD44780U Datasheet  
     https://www.sparkfun.com/datasheets/LCD/HD44780.pdf
 
-- PCF8574 I²C I/O Expander Datasheet  
+- PCF8574 I2C I/O Expander Datasheet  
     https://www.nxp.com/docs/en/data-sheet/PCF8574.pdf
 
 - HD44780 Instruction Set Summary  

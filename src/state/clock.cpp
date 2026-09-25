@@ -27,14 +27,22 @@
 #include "tedd.hpp"
 #include "main.hpp"
 
+// The clock's section works as two flags. Bit 0 picks the view (0 = big
+// digits, 1 = small view with the date) and bit 1 means the time comes from
+// the DS3231 instead of millis().
 #define ACTUAL_SECTIONS 2
+#define SECTION_SMALL_VIEW 0x1
+#define SECTION_RTC 0x2
 #define time *(sys->data)
 
+// CLOCK_BIG_VIEW is 1 and CLOCK_VIEW is 2, hence the + 1.
 #define shiftSession() sys->shiftMode(static_cast<OwakeStateID>((sys->section % ACTUAL_SECTIONS) + 1))
 
 static PackedDate date;
 static bool rtcOn = false;
 static bool timedef = false;
+// Without an RTC, the current time is baseTime plus however long millis()
+// says it has been since baseMillis.
 static uint32_t baseTime;
 static uint32_t baseMillis;
 
@@ -57,6 +65,8 @@ static void refreshTime(Subsystem *&sys)
 
 		time = baseTime + elapsed;
 
+		// A while and not an if: the clock may have been away for more than one
+		// midnight while another subsystem was running.
 		while (time >= DAYS)
 		{
 			time -= DAYS;
@@ -64,15 +74,35 @@ static void refreshTime(Subsystem *&sys)
 		}
 
 		baseTime = time;
+		// Keep the leftover milliseconds, or every refresh would lose a bit of time.
 		baseMillis = now - (now - baseMillis) % 1000;
 	}
-	else if (sys->section & 0x2)
+	else if (sys->section & SECTION_RTC)
 	{
-		rtc.updateTime();
+		// Keep showing the last good reading if the bus hiccups.
+		if (rtc.updateTime() != 0)
+		{
+			return;
+		}
+
+		uint8_t hour24 = rtc.timestamp.getHour();
+		if (rtc.timestamp.getHourMode() == HMODE_12)
+		{
+			hour24 = static_cast<uint8_t>((hour24 % 12) + ((rtc.timestamp.getMD() == PM) ? 12 : 0));
+		}
+
 		uint32_t seconds = static_cast<uint32_t>(rtc.timestamp.getSecond());
 		uint32_t minutes = static_cast<uint32_t>(rtc.timestamp.getMinute()) * MINUTES;
-		uint32_t hours = static_cast<uint32_t>(rtc.timestamp.getHour()) * HOURS;
+		uint32_t hours = static_cast<uint32_t>(hour24) * HOURS;
 		time = seconds + minutes + hours;
+
+		// The chip stores years since 2000, PackedDate counts from EPOCH.
+		uint16_t fullYear = static_cast<uint16_t>(2000u + rtc.timestamp.getYear() + (rtc.timestamp.getCentury() ? 100u : 0u));
+		uint16_t packedYear = (fullYear > EPOCH) ? static_cast<uint16_t>(fullYear - EPOCH) : 0u;
+		date = PackedDate(
+			rtc.timestamp.getDay(),
+			rtc.timestamp.getMonth(),
+			static_cast<uint8_t>((packedYear > MAX_PACKED_YEAR) ? MAX_PACKED_YEAR : packedYear));
 	}
 	else
 	{
@@ -80,6 +110,7 @@ static void refreshTime(Subsystem *&sys)
 	}
 }
 
+// Small markers in the left column shared by both views.
 static void fgui()
 {
 	lcd.home();
@@ -112,6 +143,12 @@ void Clock::Set::setup(StateCtx *ctx)
 
 	if (rtc.isAvailable() == 0) // rtc available.
 	{
+		// It may have been plugged in after boot, and setTime() refuses to
+		// write until start() has run and read the OSF flag.
+		if (!rtc.flags.started)
+		{
+			rtc.start();
+		}
 		rtcOn = true;
 		// osf flag on, aka setted time unreliable
 		if (rtc.flags.osf)
@@ -126,6 +163,8 @@ void Clock::Set::setup(StateCtx *ctx)
 	else
 	{ // rtc NOT available.
 
+		// The RTC was the time source and it's gone now. millis() was never
+		// synced to it, so ask for the time again.
 		if (rtcOn)
 		{
 			rtcOn = false;
@@ -171,21 +210,32 @@ void Clock::Set::loop(StateCtx *ctx)
 	if (rtcOn)
 	{
 		PackedTime tyme(time);
+		uint8_t yearsSince2000 = static_cast<uint8_t>(date.year + (EPOCH - 2000u));
 
 		TimestampDS3231 tstamp;
 		tstamp.setHourMode(HMODE_24); // todo: customizable ampm
-		tstamp.setCentury(false);
+		tstamp.setCentury(yearsSince2000 >= 100);
 
-		tstamp.setDay(date.day);
+		// Year and month go before the day because setDay() clamps
+		// against them (days in month, leap years).
+		tstamp.setYear(yearsSince2000);
 		tstamp.setMonth(date.month);
-		tstamp.setYear(date.year);
+		tstamp.setDay(date.day);
+		tstamp.setWeekDay(dayOfWeek(date));
 		tstamp.setHour(tyme.hour);
 		tstamp.setMinute(tyme.minute);
 		tstamp.setSecond(tyme.second);
+
+		// If the write fails, keep going on millis() (baseTime is already set).
+		if (rtc.setTime(tstamp) != 0)
+		{
+			rtcOn = false;
+		}
 	}
 
 	timedef = true;
-	sys->shiftMode(OwakeStateID::CLOCK_BIG_VIEW);
+	restoreSession(sys, rtcOn);
+	shiftSession();
 	return;
 
 jump2menu:
@@ -234,6 +284,7 @@ void Clock::BigView::loop(StateCtx *ctx)
 
 	if ((act_ok == BAction::Pressed) || (act_ok == BAction::Held))
 	{
+		sys->section |= SECTION_SMALL_VIEW;
 		sys->shiftMode(OwakeStateID::CLOCK_VIEW);
 		return;
 	}
@@ -289,6 +340,7 @@ void Clock::View::loop(StateCtx *ctx)
 
 	if ((act_ok == BAction::Pressed) || (act_ok == BAction::Held))
 	{
+		sys->section &= static_cast<uint8_t>(~SECTION_SMALL_VIEW);
 		sys->shiftMode(OwakeStateID::CLOCK_BIG_VIEW);
 		return;
 	}

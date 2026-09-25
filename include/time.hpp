@@ -29,6 +29,7 @@ constexpr uint16_t HOURS = 3600u;
 constexpr uint32_t DAYS = 86400ul;
 constexpr uint32_t MAX_HOURS = 86399ul;
 constexpr uint16_t EPOCH = 2026u; // epoch is 01/01/2026
+constexpr uint8_t MAX_PACKED_YEAR = 127u; // PackedDate::year is 7 bits wide
 
 enum TimeUnit : uint8_t
 {
@@ -65,8 +66,10 @@ struct PackedTime
 uint32_t getSecondsWithUnit(TimeUnit unit);
 uint32_t operateTime_24hrs(uint32_t t, bool forward, TimeUnit unit);
 void operateDate(PackedDate &date, bool forward, TimeUnit unit);
+uint8_t daysInMonth(const PackedDate &date);
+uint8_t dayOfWeek(const PackedDate &date);
 
 inline bool leap(uint16_t num)
 {
-    return (num % 4) == 0;
+    return (((num % 4) == 0) && ((num % 100) != 0)) || ((num % 400) == 0);
 }

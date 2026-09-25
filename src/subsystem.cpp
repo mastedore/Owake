@@ -62,6 +62,14 @@ void Subsystem::dispatch()
 		{
 			ctx.self = STATE_NOW;
 			STATE_NOW->main->setup(&ctx);
+
+			// setup() already asked for another state (Clock::Set does this when
+			// the time is known), so this state's loop() must not run. The new
+			// state takes over on the next dispatch().
+			if (next != OwakeStateID::NONE)
+			{
+				return;
+			}
 		}
 	}
 
@@ -73,6 +81,7 @@ void Subsystem::dispatch()
 
 void Subsystem::sectionMod(int8_t delta)
 {
+	// % keeps the sign of the left operand in C++, so -1 % 4 is -1, not 3.
 	int16_t tmp = (int16_t(section) + delta) % total_sections;
     if (tmp < 0) tmp += total_sections;
     section = uint8_t(tmp);

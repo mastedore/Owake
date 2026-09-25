@@ -3,7 +3,7 @@
 #	Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 #
 #	This file is licensed under
-#	BSD-2-clause
+#	MIT license
 #
 #
 
@@ -45,7 +45,7 @@ baud ?= 0
 
 
 
-# Selección automática de variant
+# Seleccion automatica de variant
 ifeq ($(mcu),atmega328p)
 VARIANT = standard
 method_def = arduino
@@ -56,6 +56,14 @@ method_def = avr109
 baud_def = 57600
 else
 $(error That is not a valid "mcu=")
+endif
+
+# method=0 / baud=0 mean "pick the usual bootloader settings for this mcu"
+ifeq ($(method),0)
+method = $(method_def)
+endif
+ifeq ($(baud),0)
+baud = $(baud_def)
 endif
 
 
@@ -101,7 +109,7 @@ MAIN_OBJS = $(OBJ_C) $(OBJ_CPP)
 
 
 # =========================
-# Librerías
+# Librerias
 # =========================
 
 CORE_LIB_DIRS = $(wildcard $(CORE_LIBRARIES_DIR)/*)
@@ -161,7 +169,8 @@ COMMON_FLAGS = $(CORE_FLAGS) \
 				  -Wno-parentheses \
 				   -Wmissing-declarations \
 					-Wno-error=unused-parameter \
-					 -Wno-unused-parameter
+					 -Wno-unused-parameter \
+					  -MMD -MP
 
 
 
@@ -227,36 +236,33 @@ $(BUILD_DIR):
 	mkdir -p $(TARGET_DIR)
 
 # =========================
-# Compilación src principal
+# Compilacion src principal
 # =========================
 $(CORE_BUILD_DIR)/%.o: $(CORE_DIR)/%.c
-	@printf "📦 $(BUILD_MSG) $<\n"
+	@printf "[core] $(BUILD_MSG) $<\n"
 	$(CC) $(CORE_FLAGS) -c $< -o $@
 
 $(CORE_BUILD_DIR)/%++.o: $(CORE_DIR)/%.cpp
-	@printf "📦 $(BUILD_MSG) $<\n"
+	@printf "[core] $(BUILD_MSG) $<\n"
 	$(CXX) $(CORE_FLAGS) -fno-threadsafe-statics -c $< -o $@
 
 $(CORE_BUILD_DIR)/%.o: $(CORE_DIR)/%.S
-	@printf "⚙ $(BUILD_MSG) $<\n"
+	@printf "[core] $(BUILD_MSG) $<\n"
 	$(CC) $(CORE_FLAGS) -c $< -o $@
 
 
-$(BUILD_DIR)/%.o:
-	mkdir -p $(dir $@)
-
 $(BUILD_DIR)/%.o: $(SOURCE_DIR)/%.c
-	@printf "🧱 $(BUILD_MSG) $<\n"
+	@printf "[src] $(BUILD_MSG) $<\n"
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/%++.o: $(SOURCE_DIR)/%.cpp
-	@printf "🧱 $(BUILD_MSG) $<\n"
+	@printf "[src] $(BUILD_MSG) $<\n"
 	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # =========================
-# Compilación librerías
+# Compilacion librerias
 # =========================
 
 
@@ -273,15 +279,15 @@ LIB$(1)_OBJ_C := $$(patsubst lib/$(1)/src/%.c,$(BUILD_DIR)/$(1)_%.o,$$(LIB$(1)_S
 LIB$(1)_OBJ_CPP := $$(patsubst lib/$(1)/src/%.cpp,$(BUILD_DIR)/$(1)_%++.o,$$(LIB$(1)_SRC_CPP))
 
 $$(LIB$(1)_OBJ_C): $(BUILD_DIR)/$(1)_%.o: lib/$(1)/src/%.c
-	@printf "📕 $(BUILD_MSG) library $$<\n"
+	@printf "[lib] $(BUILD_MSG) library $$<\n"
 	$(CC) $(CFLAGS) -Ilib/$(1)/src -c $$< -o $$@
 
 $$(LIB$(1)_OBJ_CPP): $(BUILD_DIR)/$(1)_%++.o: lib/$(1)/src/%.cpp
-	@printf "📕 $(BUILD_MSG) library $$<\n"
+	@printf "[lib] $(BUILD_MSG) library $$<\n"
 	$(CXX) $(CXXFLAGS) -Ilib/$(1)/src -c $$< -o $$@
 
 $(BUILD_DIR)/lib$(1).a: $$(LIB$(1)_OBJ_C) $$(LIB$(1)_OBJ_CPP)
-	@printf "📚 $(LINK_MSG) library $$@\n"
+	@printf "[ar] $(LINK_MSG) library $$@\n"
 	$(AR) rcs $$@ $$^
 
 endef
@@ -295,15 +301,15 @@ CORE_LIB$(1)_OBJ_C := $$(patsubst $(CORE_LIBRARIES_DIR)/$(1)/src/%.c,$(CORE_BUIL
 CORE_LIB$(1)_OBJ_CPP := $$(patsubst $(CORE_LIBRARIES_DIR)/$(1)/src/%.cpp,$(CORE_BUILD_DIR)/libraries/$(1)_%++.o,$$(CORE_LIB$(1)_SRC_CPP))
 
 $$(CORE_LIB$(1)_OBJ_C): $(CORE_BUILD_DIR)/libraries/$(1)_%.o: $(CORE_LIBRARIES_DIR)/$(1)/src/%.c
-	@printf "📕 $(BUILD_MSG) library $$<\n"
+	@printf "[lib] $(BUILD_MSG) library $$<\n"
 	$(CC) $(CORE_FLAGS) -I$(CORE_LIBRARIES_DIR)/$(1)/src -c $$< -o $$@
 
 $$(CORE_LIB$(1)_OBJ_CPP): $(CORE_BUILD_DIR)/libraries/$(1)_%++.o: $(CORE_LIBRARIES_DIR)/$(1)/src/%.cpp
-	@printf "📕 $(BUILD_MSG) library $$<\n"
+	@printf "[lib] $(BUILD_MSG) library $$<\n"
 	$(CXX) $(CORE_FLAGS) -fno-threadsafe-statics -I$(CORE_LIBRARIES_DIR)/$(1)/src -c $$< -o $$@
 
 $(CORE_BUILD_DIR)/libraries/lib$(1).a: $$(CORE_LIB$(1)_OBJ_C) $$(CORE_LIB$(1)_OBJ_CPP)
-	@printf "📚 $(LINK_MSG) library $$@\n"
+	@printf "[ar] $(LINK_MSG) library $$@\n"
 	$(AR) rcs $$@ $$^
 
 endef
@@ -315,42 +321,50 @@ $(foreach clib,$(CORE_LIB_NAMES),$(eval $(call CORE_LIB_template,$(clib))))
 # =========================
 
 $(TARGET_DIR)/$(TARGET).elf: $(MAIN_OBJS) $(LIB_ARCHIVES) $(CORE_LIB_ARCHIVES) $(CORE_LIB)
-	@printf "🔗 Linking firmware\n"
+	@printf "[ld] Linking firmware\n"
 	$(CXX) $(LDFLAGS) $^ -o $@
-	@printf "💾 avr-size Result: \n"
+	@printf "[size] avr-size Result: \n"
 	$(SIZE) $@
 
 $(TARGET_DIR)/$(TARGET).hex: $(TARGET_DIR)/$(TARGET).elf
-	@printf "🔋 Generating firmware\n"
+	@printf "[hex] Generating firmware\n"
 	$(OBJCOPY) -O ihex -R .eeprom $< $@
 
 
 $(TARGET_DIR)/$(TARGET).eep: $(TARGET_DIR)/$(TARGET).elf
-	@printf "💽 Generating EEPROM file\n"
+	@printf "[eep] Generating EEPROM file\n"
 	$(OBJCOPY) -O ihex -j .eeprom \
 	--set-section-flags=.eeprom=alloc,load \
 	--no-change-warnings \
 	$< $@
-	@printf "$(GREEN)\n✅ Building done. got firmware $(TARGET_DIR)/$(TARGET).hex <============\n\n$(RESET)"
+	@printf "$(GREEN)\n[done] Building done. got firmware $(TARGET_DIR)/$(TARGET).hex <============\n\n$(RESET)"
 
 # =========================
 # Upload
 # =========================
 
+ifeq ($(method), usbasp)
+AVRDUDE_TARGET = -c usbasp -p $(mcu)
+else
+AVRDUDE_TARGET = -c $(method) -p $(mcu) -P $(port) -b $(baud)
+endif
+
 flash: $(TARGET_DIR)/$(TARGET).hex
+ifneq ($(method), usbasp)
 ifeq ($(port), 0)
 	$(error specify a valid "port=")
 endif
-ifeq ($(method), usbasp)
-	$(AVRDUDE) -c usbasp -p $(mcu) -U flash:w:$<
-else
-	@printf "Uploading $<\n"
-	$(AVRDUDE) -c avr109 -p $(mcu) -P $(port) -b $(baud) -U flash:w:$<
 endif
+	@printf "Uploading $<\n"
+	$(AVRDUDE) $(AVRDUDE_TARGET) -U flash:w:$<:i
 
 flash_eep: $(TARGET_DIR)/$(TARGET).eep
-	$(AVRDUDE) -c $(method) -p $(mcu) \
-	-U eeprom:w:$<
+ifneq ($(method), usbasp)
+ifeq ($(port), 0)
+	$(error specify a valid "port=")
+endif
+endif
+	$(AVRDUDE) $(AVRDUDE_TARGET) -U eeprom:w:$<:i
 
 # =========================
 # Limpieza
@@ -358,4 +372,7 @@ flash_eep: $(TARGET_DIR)/$(TARGET).eep
 
 clean:
 	rm -rf $(BUILD_DIR)
-	@printf "🧼 Clean routine done.\n"
+	@printf "[clean] Clean routine done.\n"
+
+# Header dependencies written by -MMD, so editing a .h/.hpp rebuilds whoever includes it
+-include $(wildcard $(BUILD_DIR)/*.d $(BUILD_DIR)/*/*.d)
