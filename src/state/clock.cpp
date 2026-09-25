@@ -1,4 +1,5 @@
 /*
+	Connected Discord-GitHub
 	clock.cpp
 
 	Implements clock subsystem states for Owake.

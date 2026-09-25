@@ -1,7 +1,8 @@
 /*
+	Connected Discord-GitHub
     SolidCrystalI2C.cpp
 
-
+	SolidCrystalI2C is a new library to manage HD44780 LCDs.
 
     Copyright (c) 2025-2026 Mastedore <marcos@mastedore.com>
 
