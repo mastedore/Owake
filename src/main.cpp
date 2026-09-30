@@ -177,9 +177,11 @@ void setup()
 	lcd.blink(true);
 	lcd.cursor(false);
 	defineHomeSymbols();
-	lcd << writeMode::text << "Owake 1.0.0";
+	lcd << writeMode::text << "Mastedore Owake";
 	lcd.home(1);
-	lcd << "Getting Ready...";
+
+	// This shi is ikr hardcoded but idc
+	lcd << "v1.2.0. GPLv3.";
 	lcd.flush();
 	delay(1000);
 	{
